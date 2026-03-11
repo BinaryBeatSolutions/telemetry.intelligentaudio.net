@@ -45,9 +45,11 @@ export default function RealTimeDashboard() {
 
             // 2. Fortsätt lyssna på dina vanliga live-metrics som du redan har
             channel.bind('new-metric', (data: { v: number, t: number, ts: number }) => {
-                if (data.t === MetricType.NexusLatency) {
+                if (data.t === 99) {
                     setCurrentLatency(data.v);
-                    setMetrics(prev => [...prev.slice(-49), { ns: data.v, time: new Date().toLocaleTimeString() }]);
+                    setEntryCount(data.s);
+                    return;
+                    //setMetrics(prev => [...prev.slice(-49), { ns: data.v, time: new Date().toLocaleTimeString() }]);
                 }
                 if (data.t === MetricType.NexusEntryCount) {
                     setEntryCount(data.v);
