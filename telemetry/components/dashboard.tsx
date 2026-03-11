@@ -93,7 +93,7 @@ export default function RealTimeDashboard() {
             {/* Real-time Graph Section */}
             <div style={{ width: '100%', height: 300, minHeight: '300px' }}> 
                 {isClient && (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" aspect={3}>
                         <LineChart data={metrics}>
                             <YAxis hide domain={['auto', 'auto']} />
                             <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #050' }} />
