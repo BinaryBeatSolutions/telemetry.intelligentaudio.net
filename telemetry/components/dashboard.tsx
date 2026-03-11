@@ -32,34 +32,27 @@ export default function RealTimeDashboard() {
           { ssr: false }
         );
 
-        useEffect(() => {
-            setIsClient(true);
-            const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, { cluster: 'eu' });
-            const channel = pusher.subscribe('cache-nexus-telemetry');
 
-            // 1. Fånga upp den samlade cachen (för direktvisning)
-            channel.bind('full-stats', (data: { latency: number, slots: number }) => {
-                setCurrentLatency(data.latency);
-                setEntryCount(data.slots);
-            });
+    useEffect(() => {
+    
+        setIsClient(true);
+        const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, { cluster: 'eu' });
+        const channel = pusher.subscribe('cache-nexus-telemetry');
 
-            // 2. Fortsätt lyssna på dina vanliga live-metrics som du redan har
-           channel.bind('new-metric', (data: { v: number, t: number, ts: number }) => {
-            // 1. Hantera Latency (v = värde, t = 0)
+        channel.bind('new-metric', (data: { v: number, t: number, ts: number }) => {
             if (data.t === MetricType.NexusLatency) {
                 setCurrentLatency(data.v);
+                
+                // Vi håller grafen till de senaste 50 mätningarna för att spara RAM
                 setMetrics(prev => [...prev.slice(-49), { ns: data.v, time: new Date().toLocaleTimeString() }]);
             }
-    
-            // 2. Hantera Entry Count (v = värde, t = 1)
             if (data.t === MetricType.NexusEntryCount) {
-                setEntryCount(data.v); // Här ska det nog vara data.v om du följer din struct!
+                setEntryCount(data.v);
             }
         });
 
-            // Fixa namnet här så det matchar din prenumeration!
-            return () => { pusher.unsubscribe('cache-nexus-telemetry'); };
-        }, []);
+        return () => { pusher.unsubscribe('cache-nexus-telemetry'); };
+    }, []);
 
     return (
         <div className="p-8 font-mono bg-black text-green-500 min-h-screen">

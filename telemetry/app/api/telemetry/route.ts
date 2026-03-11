@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     // PANG! Skicka till Pusher
-    await pusher.trigger('nexus-telemetry', 'new-metric', body);
+    await pusher.trigger('cache-nexus-telemetry', 'new-metric', body);
 
     return NextResponse.json({ s: 'ok' });
   } catch (error) {
