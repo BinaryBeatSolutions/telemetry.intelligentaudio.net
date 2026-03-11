@@ -32,27 +32,31 @@ export default function RealTimeDashboard() {
           { ssr: false }
         );
 
+        useEffect(() => {
+            setIsClient(true);
+            const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, { cluster: 'eu' });
+            const channel = pusher.subscribe('cache-nexus-telemetry');
 
-    useEffect(() => {
-    
-        setIsClient(true);
-        const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, { cluster: 'eu' });
-        const channel = pusher.subscribe('cache-nexus-telemetry');
+            // 1. Fånga upp den samlade cachen (för direktvisning)
+            channel.bind('full-stats', (data: { latency: number, slots: number }) => {
+                setCurrentLatency(data.latency);
+                setEntryCount(data.slots);
+            });
 
-        channel.bind('new-metric', (data: { v: number, t: number, ts: number }) => {
-            if (data.t === MetricType.NexusLatency) {
-                setCurrentLatency(data.v);
-                
-                // Vi håller grafen till de senaste 50 mätningarna för att spara RAM
-                setMetrics(prev => [...prev.slice(-49), { ns: data.v, time: new Date().toLocaleTimeString() }]);
-            }
-            if (data.t === MetricType.NexusEntryCount) {
-                setEntryCount(data.v);
-            }
-        });
+            // 2. Fortsätt lyssna på dina vanliga live-metrics som du redan har
+            channel.bind('new-metric', (data: { v: number, t: number, ts: number }) => {
+                if (data.t === MetricType.NexusLatency) {
+                    setCurrentLatency(data.v);
+                    setMetrics(prev => [...prev.slice(-49), { ns: data.v, time: new Date().toLocaleTimeString() }]);
+                }
+                if (data.t === MetricType.NexusEntryCount) {
+                    setEntryCount(data.v);
+                }
+            });
 
-        return () => { pusher.unsubscribe('nexus-telemetry'); };
-    }, []);
+            // Fixa namnet här så det matchar din prenumeration!
+            return () => { pusher.unsubscribe('cache-nexus-telemetry'); };
+        }, []);
 
     return (
         <div className="p-8 font-mono bg-black text-green-500 min-h-screen">
