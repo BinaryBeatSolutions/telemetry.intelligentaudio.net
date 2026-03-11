@@ -91,18 +91,16 @@ export default function RealTimeDashboard() {
             </div>
 
             {/* Real-time Graph Section */}
-            <div style={{ width: '100%', height: 300, minHeight: '300px' }}> 
-                {isClient && (
-                    <ResponsiveContainer width="100%" aspect={3}>
-                        <LineChart data={metrics}>
-                            <YAxis hide domain={['auto', 'auto']} />
-                            <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #050' }} />
-                            <Line type="monotone" dataKey="ns" stroke="#00ff00" strokeWidth={2} dot={false} isAnimationActive={false} />
-                        </LineChart>
-                    </ResponsiveContainer>
-                )}
-            </div>
-
+            {isClient && (
+                <div className="mt-8 border border-green-900 bg-green-950/5 p-4 h-[300px] flex items-center justify-center overflow-hidden">
+                    {/* Fasta mått = Inga fler width(-1) fel i konsolen */}
+                    <LineChart width={800} height={250} data={metrics}>
+                        <YAxis hide domain={['auto', 'auto']} />
+                        <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #050' }} />
+                        <Line type="monotone" dataKey="ns" stroke="#00ff00" strokeWidth={2} dot={false} isAnimationActive={false} />
+                    </LineChart>
+                </div>
+            )}
 
             <footer className="mt-8 pt-4 border-t border-green-900 flex justify-between text-[10px] text-green-800">
                 <span>INTELLECTUAL PROPERTY OF INTELLIGENTAUDIO.NET</span>
