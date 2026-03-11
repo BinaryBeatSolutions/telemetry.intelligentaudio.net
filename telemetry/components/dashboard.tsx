@@ -66,16 +66,16 @@ export default function RealTimeDashboard() {
             </div>
 
             {/* Real-time Graph Section */}
-            <div className="mt-8 border border-green-900 bg-green-950/5 p-4 h-[300px]">
-                <p className="text-[10px] text-green-700 mb-4 tracking-widest uppercase">Sub-Microsecond Pulse (Live Trace)</p>
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={metrics}>
+            <div style={{ width: '100%', height: 300 }}> 
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={metrics}>
                         <YAxis hide domain={['auto', 'auto']} />
                         <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #050' }} itemStyle={{ color: '#0f0' }} />
                         <Line type="monotone" dataKey="ns" stroke="#00ff00" strokeWidth={2} dot={false} isAnimationActive={false} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>
+
 
             <footer className="mt-8 pt-4 border-t border-green-900 flex justify-between text-[10px] text-green-800">
                 <span>INTELLECTUAL PROPERTY OF INTELLIGENTAUDIO.NET</span>
