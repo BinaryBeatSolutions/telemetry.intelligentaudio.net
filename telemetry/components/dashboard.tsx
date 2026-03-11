@@ -37,7 +37,7 @@ export default function RealTimeDashboard() {
     
         setIsClient(true);
         const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, { cluster: 'eu' });
-        const channel = pusher.subscribe('nexus-telemetry');
+        const channel = pusher.subscribe('cache-nexus-telemetry');
 
         channel.bind('new-metric', (data: { v: number, t: number, ts: number }) => {
             if (data.t === MetricType.NexusLatency) {
