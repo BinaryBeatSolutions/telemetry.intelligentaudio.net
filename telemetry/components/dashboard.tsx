@@ -1,7 +1,14 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Pusher from 'pusher-js';
-import { LineChart, Line, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+
+// Dynamiska importer för att slippa "width -1" felet i konsolen
+const ResponsiveContainer = dynamic(() => import('recharts').then(m => m.ResponsiveContainer), { ssr: false });
+const LineChart = dynamic(() => import('recharts').then(m => m.LineChart), { ssr: false });
+const Line = dynamic(() => import('recharts').then(m => m.Line), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(m => m.YAxis), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then(m => m.Tooltip), { ssr: false });
 
 enum MetricType { NexusLatency = 0, NexusEntryCount = 1 }
 
@@ -9,8 +16,26 @@ export default function RealTimeDashboard() {
     const [metrics, setMetrics] = useState<any[]>([]);
     const [currentLatency, setCurrentLatency] = useState(0);
     const [entryCount, setEntryCount] = useState(0);
+    const [isClient, setIsClient] = useState(false);
+    // Importera grafen dynamiskt och stäng av SSR helt för den
+
+        const ResponsiveContainer = dynamic(
+          () => import('recharts').then((mod) => mod.ResponsiveContainer),
+          { ssr: false }
+        );
+        const LineChart = dynamic(
+          () => import('recharts').then((mod) => mod.LineChart),
+          { ssr: false }
+        );
+        const Line = dynamic(
+          () => import('recharts').then((mod) => mod.Line),
+          { ssr: false }
+        );
+
 
     useEffect(() => {
+    
+        setIsClient(true);
         const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, { cluster: 'eu' });
         const channel = pusher.subscribe('nexus-telemetry');
 
@@ -66,14 +91,16 @@ export default function RealTimeDashboard() {
             </div>
 
             {/* Real-time Graph Section */}
-            <div style={{ width: '100%', height: 300 }}> 
-            <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={metrics}>
-                        <YAxis hide domain={['auto', 'auto']} />
-                        <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #050' }} itemStyle={{ color: '#0f0' }} />
-                        <Line type="monotone" dataKey="ns" stroke="#00ff00" strokeWidth={2} dot={false} isAnimationActive={false} />
-                    </LineChart>
-                </ResponsiveContainer>
+            <div style={{ width: '100%', height: 300, minHeight: '300px' }}> 
+                {isClient && (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={metrics}>
+                            <YAxis hide domain={['auto', 'auto']} />
+                            <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #050' }} />
+                            <Line type="monotone" dataKey="ns" stroke="#00ff00" strokeWidth={2} dot={false} isAnimationActive={false} />
+                        </LineChart>
+                    </ResponsiveContainer>
+                )}
             </div>
 
 
