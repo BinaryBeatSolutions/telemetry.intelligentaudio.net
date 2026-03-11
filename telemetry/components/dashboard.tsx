@@ -44,17 +44,18 @@ export default function RealTimeDashboard() {
             });
 
             // 2. Fortsätt lyssna på dina vanliga live-metrics som du redan har
-            channel.bind('new-metric', (data: { v: number, t: number, ts: number }) => {
-                if (data.t === 99) {
-                    setCurrentLatency(data.v);
-                    setEntryCount(data.s);
-                    return;
-                    //setMetrics(prev => [...prev.slice(-49), { ns: data.v, time: new Date().toLocaleTimeString() }]);
-                }
-                if (data.t === MetricType.NexusEntryCount) {
-                    setEntryCount(data.v);
-                }
-            });
+           channel.bind('new-metric', (data: { v: number, t: number, ts: number }) => {
+            // 1. Hantera Latency (v = värde, t = 0)
+            if (data.t === MetricType.NexusLatency) {
+                setCurrentLatency(data.v);
+                setMetrics(prev => [...prev.slice(-49), { ns: data.v, time: new Date().toLocaleTimeString() }]);
+            }
+    
+            // 2. Hantera Entry Count (v = värde, t = 1)
+            if (data.t === MetricType.NexusEntryCount) {
+                setEntryCount(data.v); // Här ska det nog vara data.v om du följer din struct!
+            }
+        });
 
             // Fixa namnet här så det matchar din prenumeration!
             return () => { pusher.unsubscribe('cache-nexus-telemetry'); };
