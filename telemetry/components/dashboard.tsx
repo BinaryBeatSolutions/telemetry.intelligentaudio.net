@@ -1,110 +1,117 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import Pusher from 'pusher-js';
+import { useNexusPulse } from '@/hooks/useNexusPulse';
 
-// Dynamiska importer för att slippa "width -1" felet i konsolen
+
+// Dynamiska importer för att slippa SSR-problem med Recharts
 const ResponsiveContainer = dynamic(() => import('recharts').then(m => m.ResponsiveContainer), { ssr: false });
 const LineChart = dynamic(() => import('recharts').then(m => m.LineChart), { ssr: false });
 const Line = dynamic(() => import('recharts').then(m => m.Line), { ssr: false });
 const YAxis = dynamic(() => import('recharts').then(m => m.YAxis), { ssr: false });
 const Tooltip = dynamic(() => import('recharts').then(m => m.Tooltip), { ssr: false });
 
-enum MetricType { NexusLatency = 0, NexusEntryCount = 1 }
+interface MetricPoint {
+    ns: number;
+    time: string;
+}
 
 export default function RealTimeDashboard() {
-    const [metrics, setMetrics] = useState<any[]>([]);
-    const [currentLatency, setCurrentLatency] = useState(0);
-    const [entryCount, setEntryCount] = useState(0);
+
     const [isClient, setIsClient] = useState(false);
-    // Importera grafen dynamiskt och stäng av SSR helt för den
+    const [metrics, setMetrics] = useState<MetricPoint[]>([]);
+    
+    const [uiEntryCount, setUiEntryCount] = useState(0);
 
-        const ResponsiveContainer = dynamic(
-          () => import('recharts').then((mod) => mod.ResponsiveContainer),
-          { ssr: false }
-        );
-        const LineChart = dynamic(
-          () => import('recharts').then((mod) => mod.LineChart),
-          { ssr: false }
-        );
-        const Line = dynamic(
-          () => import('recharts').then((mod) => mod.Line),
-          { ssr: false }
-        );
-
+    const { status, client, latency } = useNexusPulse(
+        'wss://telemetry.intelligentaudio.net/pulse',
+        process.env.NEXT_PUBLIC_NEXUS_KEY || 'DEV_KEY'
+    );
 
     useEffect(() => {
-    
-        setIsClient(true);
-        const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, { cluster: 'eu' });
-        const channel = pusher.subscribe('cache-nexus-telemetry');
+        // Vi skapar en kontrollerad UI-uppdatering
+        const uiTimer = setInterval(() => {
+            if (status !== 'online') return;
 
-        channel.bind('new-metric', (data: { v: number, t: number, ts: number }) => {
-            if (data.t === MetricType.NexusLatency) {
-                setCurrentLatency(data.v);
-                
-                // Vi håller grafen till de senaste 50 mätningarna för att spara RAM
-                setMetrics(prev => [...prev.slice(-49), { ns: data.v, time: new Date().toLocaleTimeString() }]);
-            }
-            if (data.t === MetricType.NexusEntryCount) {
-                setEntryCount(data.v);
-            }
-        });
+            // Vi läser från den "tysta" klient-referensen
+            const count = client.getEntryCount();
 
-        return () => { pusher.unsubscribe('cache-nexus-telemetry'); };
-    }, []);
+            // Endast om värdet faktiskt har ändrats uppdaterar vi state
+            setUiEntryCount(prev => prev !== count ? count : prev);
+
+        }, 100); // 10Hz räcker gott för text-siffror, sparar massor av CPU
+
+        return () => clearInterval(uiTimer);
+    }, [status, client]);
 
     return (
         <div className="p-8 font-mono bg-black text-green-500 min-h-screen">
             <header className="border-b border-green-900 pb-4 flex justify-between items-end">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tighter">NEXUS [STRESS-TEST]</h1>
-                    <p className="text-xs text-green-800 uppercase">Architecture: NANO-Standard / Zero-Alloc / .NET 10 Native AOT</p>
+                    <h1 className="text-3xl font-bold tracking-tighter">NEXUS [PULSE-MIRROR]</h1>
+                    <p className="text-[10px] text-green-800 uppercase">
+                        Protocol: NEXUS.Pulse v1.0 / Transport: WSS-Binary / Engine: .NET 10
+                    </p>
                 </div>
                 <div className="text-right">
-                    <p className="text-xs">Uptime: LIVE</p>
-                    <p className="text-xs text-green-700">Source: Avalonia Local Instance (Norway)</p>
+                    <p className="text-[10px]">SYSTEM STATUS:
+                        <span className={status === 'online' ? "text-green-400" : "text-red-600"}>
+                            {status.toUpperCase()}
+                        </span>
+                    </p>
+                    <p className="text-[10px] text-green-700 underline">nexus.intelligentaudio.net</p>
                 </div>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-                {/* Latency Card */}
-                <div className="border border-green-900 p-6 bg-green-950/10">
-                    <p className="text-[10px] text-green-700 uppercase tracking-widest">Latency (Deterministic)</p>
-                    <p className="text-7xl font-black">{currentLatency.toLocaleString()}<span className="text-2xl ml-2">ns</span></p>
+                {/* Latency Card (Deterministisk från C# Header) */}
+                <div className="border border-green-900 p-6 bg-green-950/10 shadow-[0_0_15px_rgba(0,50,0,0.3)]">
+                    <p className="text-[10px] text-green-700 uppercase tracking-widest">Pulse Latency</p>
+                    <p className="text-7xl font-black">{latency.toFixed(0)}<span className="text-2xl ml-2">ns</span></p>
                 </div>
 
-                {/* Entry Count Card */}
-                <div className="border border-green-900 p-6 bg-green-950/10">
-                    <p className="text-[10px] text-green-700 uppercase tracking-widest">Memory-Mapped Registry</p>
-                    <p className="text-7xl font-black">{entryCount.toLocaleString()}<span className="text-2xl ml-2">slots</span></p>
+                {/* Entry Count Card (Läser direkt från din MMF-spegel) */}
+                <div className="border border-green-900 p-6 bg-green-950/10 shadow-[0_0_15px_rgba(0,50,0,0.3)]">
+                    <p className="text-[10px] text-green-700 uppercase tracking-widest">Shared Memory Registry</p>
+                    <p className="text-7xl font-black">{uiEntryCount.toLocaleString()}<span className="text-2xl ml-2">slots</span></p>
                 </div>
 
-                {/* Info Card */}
+                {/* Performance Constraints Card */}
                 <div className="border border-green-900 p-6 bg-green-900/5 text-[10px] space-y-2">
-                    <p className="text-green-600 font-bold border-b border-green-900 pb-1">SYSTEM CONSTRAINTS</p>
-                    <div className="flex justify-between"><span>ALLOCATION:</span><span>ZERO-HEAP</span></div>
-                    <div className="flex justify-between"><span>MMF SIZE:</span><span>24.0 MB</span></div>
-                    <div className="flex justify-between"><span>SEARCH O:</span><span>log(n)</span></div>
-                    <div className="flex justify-between"><span>TRANSPORT:</span><span>QUIC / HTTP/3</span></div>
+                    <p className="text-green-600 font-bold border-b border-green-900 pb-1 uppercase">Nano-Standard Verification</p>
+                    <div className="flex justify-between"><span>ALLOCATION:</span><span className="text-white">ZERO-HEAP</span></div>
+                    <div className="flex justify-between"><span>MMF MIRROR:</span><span className="text-white">24.0 MB</span></div>
+                    <div className="flex justify-between"><span>SEARCH O:</span><span className="text-white">LOG(N)</span></div>
+                    <div className="flex justify-between"><span>SYNC:</span><span className="text-white">DIRECT-PTR</span></div>
                 </div>
             </div>
 
-            {/* Real-time Graph Section */}
+            {/* Real-time Graph (Visar jitter/latens i nätverkspulsen) */}
             {isClient && (
-                <div className="mt-8 border border-green-900 bg-green-950/5 p-4 h-[300px] flex items-center justify-center overflow-hidden">
-                    {/* Fasta mått = Inga fler width(-1) fel i konsolen */}
-                    <LineChart width={800} height={250} data={metrics}>
-                        <YAxis hide domain={['auto', 'auto']} />
-                        <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #050' }} />
-                        <Line type="monotone" dataKey="ns" stroke="#00ff00" strokeWidth={2} dot={false} isAnimationActive={false} />
-                    </LineChart>
+                <div className="mt-8 border border-green-900 bg-green-950/5 p-4 h-[300px] flex items-center justify-center overflow-hidden relative">
+                    <div className="absolute top-2 left-2 text-[8px] text-green-900 uppercase">Network Jitter Analysis</div>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={metrics}>
+                            <YAxis hide domain={['auto', 'auto']} />
+                            <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #050', fontSize: '10px' }} />
+                            <Line
+                                type="monotone"
+                                dataKey="ns"
+                                stroke="#00ff00"
+                                strokeWidth={2}
+                                dot={false}
+                                isAnimationActive={false}
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
                 </div>
             )}
 
-            <footer className="mt-8 pt-4 border-t border-green-900 flex justify-between text-[10px] text-green-800">
-                <span>INTELLECTUAL PROPERTY OF INTELLIGENTAUDIO.NET</span>
-                <span className="animate-pulse">● SIGNAL ESTABLISHED VIA VERCEL EDGE</span>
+            <footer className="mt-8 pt-4 border-t border-green-900 flex justify-between text-[10px] text-green-800 uppercase tracking-widest">
+                <span>© {new Date().getFullYear()} IntelligentAudio.NET | Private Vault</span>
+                <span className={status === 'online' ? "animate-pulse text-green-400" : "text-red-900"}>
+                    {status === 'online' ? "● NEXUS-LINK ESTABLISHED" : "○ SEARCHING FOR NEXUS..."}
+                </span>
             </footer>
         </div>
     );
