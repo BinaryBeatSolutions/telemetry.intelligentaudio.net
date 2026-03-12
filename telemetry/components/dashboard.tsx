@@ -24,7 +24,7 @@ export default function RealTimeDashboard() {
     const [uiEntryCount, setUiEntryCount] = useState(0);
 
     const { status, client, latency } = useNexusPulse(
-        'wss://telemetry.intelligentaudio.net/pulse',
+        'wss://pulse.intelligentaudio.net/pulse',
         process.env.NEXT_PUBLIC_NEXUS_KEY || 'DEV_KEY'
     );
 
