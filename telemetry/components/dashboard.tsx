@@ -24,8 +24,7 @@ export default function RealTimeDashboard() {
     const [uiEntryCount, setUiEntryCount] = useState(0);
 
     const { status, client, latency } = useNexusPulse(
-        'wss://pulse.intelligentaudio.net/pulse',
-        process.env.NEXT_PUBLIC_NEXUS_KEY || 'DEV_KEY'
+        'wss://pulse.intelligentaudio.net/pulse', process.env.NEXUS_PULSE_KEY || "NEXUS_PULSE_KEY"
     );
 
     useEffect(() => {
@@ -59,7 +58,7 @@ export default function RealTimeDashboard() {
                             {status.toUpperCase()}
                         </span>
                     </p>
-                    <p className="text-[10px] text-green-700 underline">nexus.intelligentaudio.net</p>
+                    <p className="text-[10px] text-green-700 underline">telemetry.intelligentaudio.net</p>
                 </div>
             </header>
 
