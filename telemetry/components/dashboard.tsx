@@ -73,7 +73,11 @@ export default function RealTimeDashboard() {
                 {/* Entry Count Card (Läser direkt från din MMF-spegel) */}
                 <div className="border border-green-900 p-6 bg-green-950/10 shadow-[0_0_15px_rgba(0,50,0,0.3)]">
                     <p className="text-[10px] text-green-700 uppercase tracking-widest">Shared Memory Registry</p>
-                    <p className="text-6xl font-black">{uiEntryCount}<span className="text-2xl ml-2">slots</span></p>
+                    <p className="text-8xl font-black tracking-tight">{new Intl.NumberFormat('sv-SE', {
+                        notation: "compact",
+                        compactDisplay: "short"
+                    }).format(uiEntryCount).replace(/\s/g, "") }<span className="text-2xl ml-2">slots</span></p>
+                    <p className="text-2xl">({uiEntryCount})</p>
                 </div>
 
                 {/* Performance Constraints Card */}
