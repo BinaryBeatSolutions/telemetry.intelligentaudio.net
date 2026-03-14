@@ -14,18 +14,44 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-    title: "NEXUS [PULSE-MIRROR] | IntelligentAudio.NET",
-    description: "Real-time Zero-Heap Telemetry Mirror - Protocol: NXP v1.0",
-    viewport: "width=device-width, initial-scale=1, maximum-scale=1",
-    icons: {
-        icon: "/favicon.ico", // Se till att ha en grön ikon här för rätt känsla
+    manifest: "/manifest.json", // Länkar till filen ovan
+    themeColor: "#000000",
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "black-translucent",
+        title: "NEXUS Pulse mirror",
     },
+    // Rättade stavningen på "Meter" och lade till din brand-standard
+    title: "NEXUS [PULSE-MIRROR] | Real-time Telemetry & Latency Meter",
+    description: "IntelligentAudio.NET - Ultra-low latency Zero-Heap Architecture",
+
     openGraph: {
-        title: "NEXUS [PULSE-MIRROR]",
-        description: "Nano-Standard Verification & Shared Memory Registry Monitor",
-        images:, // Om du vill ha en snygg bild när du delar länken
+        title: 'NEXUS.Pulse | Real-time Performance Mirror',
+        description: 'Ultra-low latency telemetry with NEXUS NXP-Protocol. Zero-Heap, Direct-Ptr Verification.',
+        url: 'https://telemetry.intelligentaudio.net',
+        siteName: 'IntelligentAudio NEXUS',
+        images: [
+            {
+                url: '/telemetry.png', // Next.js hittar den i public-mappen
+                width: 1200,
+                height: 630,
+                alt: 'NEXUS.Pulse Dashboard Preview',
+            },
+        ],
+        locale: 'en_US',
+        type: 'website',
     },
+    // Robots-inställningar så att IT-folket hittar dig på Google
+    robots: {
+        index: true,
+        follow: true,
+    },
+    icons: {
+        icon: '/icon.png',
+        apple: 'telemetry.png',
+    }
 };
+
 export default function RootLayout({
   children,
 }: Readonly<{

@@ -1,0 +1,22 @@
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <defs>
+    <style>
+      .bg { fill: #000000; }
+      .frame { fill: none; stroke: #004400; stroke-width: 4; }
+      .pulse { fill: none; stroke: #22C55E; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+      .dot { fill: #004400; }
+    </style>
+  </defs>
+  <!-- Bakgrund -->
+  <rect class="bg" width="180" height="180" rx="20"/>
+  <rect class="frame" x="5" y="5" width="170" height="170" rx="15"/>
+  
+  <!-- Puls -->
+  <path class="pulse" d="M30 90h25l15-50l40 100l15-50h30"/>
+  
+  <!-- Nano-dots -->
+  <circle class="dot" cx="25" cy="25" r="6"/>
+  <circle class="dot" cx="155" cy="25" r="6"/>
+  <circle class="dot" cx="25" cy="155" r="6"/>
+  <circle class="dot" cx="155" cy="155" r="6"/>
+</svg>
