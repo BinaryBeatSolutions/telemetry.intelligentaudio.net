@@ -59,6 +59,7 @@ export default function RealTimeDashboard() {
                         </span>
                     </p>
                     <p className="text-[10px] text-green-700 underline">telemetry.intelligentaudio.net</p>
+                    <p className="text-[10px] text-green-700 underline">Local instance: Norway</p>
                 </div>
             </header>
 
