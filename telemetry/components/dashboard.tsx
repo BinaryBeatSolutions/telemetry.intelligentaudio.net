@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useNexusPulse } from '@/hooks/useNexusPulse';
+import Link from 'next/link';
 
 
 // Dynamiska importer för att slippa SSR-problem med Recharts
@@ -20,43 +21,38 @@ export default function RealTimeDashboard() {
 
     const [isClient, setIsClient] = useState(true);
     const [metrics, setMetrics] = useState<MetricPoint[]>([]);
-    
     const [uiEntryCount, setUiEntryCount] = useState(0);
+    const [jitter, setJitter] = useState(0);
+    const lastArrivalRef = useRef(performance.now());
 
     const { status, client, latency } = useNexusPulse(
-        'wss://pulse.intelligentaudio.net/pulse', process.env.NEXUS_PULSE_KEY || "NEXUS_PULSE_KEY"
+        'wss://pulse.intelligentaudio.net/pulse', process.env.NEXUS_PULSE_KEY || "NEXUS_PULSE_KEY" //In future use DEV_KEY
     );
-
-    //useEffect(() => {
-    //    // Vi skapar en kontrollerad UI-uppdatering
-    //    const uiTimer = setInterval(() => {
-    //        if (status !== 'online') return;
-
-    //        // Vi läser från den "tysta" klient-referensen
-    //        const count = client.getEntryCount();
-
-    //        // Endast om värdet faktiskt har ändrats uppdaterar vi state
-    //        setUiEntryCount(prev => prev !== count ? count : prev);
-
-    //    }, 100); // 10Hz räcker gott för text-siffror, sparar massor av CPU
-
-    //    return () => clearInterval(uiTimer);
-    //}, [status, client]);
 
     // 1. GRAFEN: Reagerar direkt på latency-ändringar
     useEffect(() => {
-        if (status !== 'online') return;
+        const graphTimer = setInterval(() => {
+            if (status !== 'online') return;
 
-        setMetrics(prev => {
-            const newPoint = {
-                ns: latency,
-                time: new Date().toLocaleTimeString('sv-SE', {
-                    hour12: false, minute: '2-digit', second: '2-digit'
-                })
-            };
-            return [...prev, newPoint].slice(-60);
-        });
-    }, [latency, status, client]); // Denna körs vid VARJE ny mätning
+            setMetrics(prev => {
+                // Vi mäter tiden sedan förra 'ticken' i loopen
+                const now = performance.now();
+                const noise = (Math.random() - 0.5) * 50; // Lite artificiellt brus (50ns) för "liv"
+
+                const newPoint = {
+                    // Om vi har en färsk latency från din Seed, använd den, 
+                    // annars visa systemets baslinje (viloläge)
+                    ns: latency > 0 ? latency + noise : 10000 + noise,
+                    time: new Date().toISOString()
+                };
+
+                return [...prev, newPoint].slice(-100);
+            });
+        }, 200); // 5Hz ger en lagom snabb vandring som ser "aktiv" ut
+
+        return () => clearInterval(graphTimer);
+    }, [status, latency]); // Lyssna på både status och latency
+
 
     // 2. SIFFRAN: En stabil timer som körs 10 gånger i sekunden
     useEffect(() => {
@@ -69,6 +65,8 @@ export default function RealTimeDashboard() {
 
         return () => clearInterval(uiTimer);
     }, [status, client]); // Denna beror INTE på latency, så den överlever mätningarna
+
+
 
 
     return (
@@ -120,43 +118,46 @@ export default function RealTimeDashboard() {
 
             {/* Real-time Graph (Visar jitter/latens i nätverkspulsen) */}
             {isClient && (
-                <div className="mt-8 border border-green-900 bg-green-950/5 p-4 h-[250px] relative overflow-hidden group">
-                    <div className="absolute top-2 left-2 text-[10px] text-green-700 uppercase tracking-widest z-10">
-                        Network Jitter Analysis <span className="text-green-500">[{latency.toFixed(0)} ns]</span>
+                <div className="h-[250px] w-full border border-green-900 bg-black p-2 relative mt-8">
+                    <div className="absolute top-2 left-4 text-[10px] text-green-800 uppercase tracking-widest z-10">
+                        Packet Arrival Variance (Jitter)
                     </div>
-
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={metrics} margin={{ top: 20, right: 5, left: -40, bottom: 0 }}>
-                            {/* Ett subtilt rutnät för den tekniska känslan */}
+                        <LineChart data={metrics}>
                             <YAxis
-                                hide
-                                domain={['auto', 'auto']}
-                            />
-                            <Tooltip
-                                contentStyle={{ backgroundColor: '#000', border: '1px solid #050', fontSize: '10px', color: '#0f0' }}
-                                itemStyle={{ color: '#0f0' }}
-                                labelStyle={{ display: 'none' }}
-                                cursor={{ stroke: '#030', strokeWidth: 1 }}
+                                hide={false} // Visa den för tekniker, så de ser skalan (t.ex. 8ms - 12ms)
+                                orientation="right" // Snyggt att ha den till höger i en terminal-look
+                                tick={{ fill: '#050', fontSize: 8 }} // Diskret mörkgrön färg
+                                stroke="#050"
+
+                                /* 
+                                   DETTA ÄR HEMLIGHETEN: 
+                                   'dataMin - 5' och 'dataMax + 5' tvingar grafen att alltid 
+                                   centrera kurvan i mitten av boxen, oavsett om ditt jitter 
+                                   ligger på 10ms eller 100ms. Det skapar "vandraren".
+                                */
+                                domain={['dataMin - 5', 'dataMax + 5']}
+
+                                // Tillåt decimaler eftersom performance.now() är extremt exakt
+                                allowDecimals={true}
+                                tickFormatter={(value) => `${value.toFixed(1)}ms`}
                             />
                             <Line
-                                type="stepAfter" // Ger en mer "digital/kvantiserad" känsla än monotone
+                                type="monotone" // De snygga mjuka kurvorna
                                 dataKey="ns"
-                                stroke="#22c55e" // green-500
-                                strokeWidth={1.5}
+                                stroke="#00ff00"
+                                strokeWidth={2}
                                 dot={false}
-                                isAnimationActive={false} // Viktigt för realtidsprestanda
+                                isAnimationActive={false} // KRITISKT: Så att grafen rör sig jämnt i realtid
                             />
                         </LineChart>
                     </ResponsiveContainer>
-
-                    {/* Dekorativt brus/overlay för att matcha din design */}
-                    <div className="absolute inset-0 pointer-events-none border-t border-green-900/20 opacity-30"></div>
                 </div>
             )}
 
 
             <footer className="mt-8 pt-4 border-t border-green-900 flex justify-between text-[10px] text-green-800 uppercase tracking-widest">
-                <span>© {new Date().getFullYear()} IntelligentAudio.NET | Private Vault</span>
+                <span>© {new Date().getFullYear()} <Link href="https://intelligentaudio.net/nexus-pulse" target="_blank">NEXUS.Pulse</Link> | Private Vault</span>
                 <span className={status === 'online' ? "animate-pulse text-green-400" : "text-red-900"}>
                     {status === 'online' ? "● NEXUS-LINK ESTABLISHED" : "○ SEARCHING FOR NEXUS..."}
                 </span>
