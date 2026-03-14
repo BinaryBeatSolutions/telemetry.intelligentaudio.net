@@ -45,7 +45,7 @@ export default function RealTimeDashboard() {
 
     // 1. GRAFEN: Reagerar direkt på latency-ändringar
     useEffect(() => {
-        if (status !== 'online' || !client) return;
+        if (status !== 'online') return;
 
         setMetrics(prev => {
             const newPoint = {
