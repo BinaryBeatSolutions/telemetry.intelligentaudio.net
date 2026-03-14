@@ -18,7 +18,7 @@ interface MetricPoint {
 
 export default function RealTimeDashboard() {
 
-    const [isClient, setIsClient] = useState(false);
+    const [isClient, setIsClient] = useState(true);
     const [metrics, setMetrics] = useState<MetricPoint[]>([]);
     
     const [uiEntryCount, setUiEntryCount] = useState(0);
@@ -27,21 +27,49 @@ export default function RealTimeDashboard() {
         'wss://pulse.intelligentaudio.net/pulse', process.env.NEXUS_PULSE_KEY || "NEXUS_PULSE_KEY"
     );
 
+    //useEffect(() => {
+    //    // Vi skapar en kontrollerad UI-uppdatering
+    //    const uiTimer = setInterval(() => {
+    //        if (status !== 'online') return;
+
+    //        // Vi läser från den "tysta" klient-referensen
+    //        const count = client.getEntryCount();
+
+    //        // Endast om värdet faktiskt har ändrats uppdaterar vi state
+    //        setUiEntryCount(prev => prev !== count ? count : prev);
+
+    //    }, 100); // 10Hz räcker gott för text-siffror, sparar massor av CPU
+
+    //    return () => clearInterval(uiTimer);
+    //}, [status, client]);
+
+    // 1. GRAFEN: Reagerar direkt på latency-ändringar
     useEffect(() => {
-        // Vi skapar en kontrollerad UI-uppdatering
+        if (status !== 'online' || !client) return;
+
+        setMetrics(prev => {
+            const newPoint = {
+                ns: latency,
+                time: new Date().toLocaleTimeString('sv-SE', {
+                    hour12: false, minute: '2-digit', second: '2-digit'
+                })
+            };
+            return [...prev, newPoint].slice(-60);
+        });
+    }, [latency, status, client]); // Denna körs vid VARJE ny mätning
+
+    // 2. SIFFRAN: En stabil timer som körs 10 gånger i sekunden
+    useEffect(() => {
+        if (status !== 'online' || !client) return;
+
         const uiTimer = setInterval(() => {
-            if (status !== 'online') return;
-
-            // Vi läser från den "tysta" klient-referensen
             const count = client.getEntryCount();
-
-            // Endast om värdet faktiskt har ändrats uppdaterar vi state
-            setUiEntryCount(prev => prev !== count ? count : prev);
-
-        }, 100); // 10Hz räcker gott för text-siffror, sparar massor av CPU
+            setUiEntryCount(prev => (prev !== count ? count : prev));
+        }, 100);
 
         return () => clearInterval(uiTimer);
-    }, [status, client]);
+    }, [status, client]); // Denna beror INTE på latency, så den överlever mätningarna
+
 
     return (
         <div className="p-8 font-mono bg-black text-green-500 min-h-screen">
@@ -92,24 +120,40 @@ export default function RealTimeDashboard() {
 
             {/* Real-time Graph (Visar jitter/latens i nätverkspulsen) */}
             {isClient && (
-                <div className="mt-8 border border-green-900 bg-green-950/5 p-4 h-[300px] flex items-center justify-center overflow-hidden relative">
-                    <div className="absolute top-2 left-2 text-[8px] text-green-900 uppercase">Network Jitter Analysis</div>
+                <div className="mt-8 border border-green-900 bg-green-950/5 p-4 h-[250px] relative overflow-hidden group">
+                    <div className="absolute top-2 left-2 text-[10px] text-green-700 uppercase tracking-widest z-10">
+                        Network Jitter Analysis <span className="text-green-500">[{latency.toFixed(0)} ns]</span>
+                    </div>
+
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={metrics}>
-                            <YAxis hide domain={['auto', 'auto']} />
-                            <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #050', fontSize: '10px' }} />
+                        <LineChart data={metrics} margin={{ top: 20, right: 5, left: -40, bottom: 0 }}>
+                            {/* Ett subtilt rutnät för den tekniska känslan */}
+                            <YAxis
+                                hide
+                                domain={['auto', 'auto']}
+                            />
+                            <Tooltip
+                                contentStyle={{ backgroundColor: '#000', border: '1px solid #050', fontSize: '10px', color: '#0f0' }}
+                                itemStyle={{ color: '#0f0' }}
+                                labelStyle={{ display: 'none' }}
+                                cursor={{ stroke: '#030', strokeWidth: 1 }}
+                            />
                             <Line
-                                type="monotone"
+                                type="stepAfter" // Ger en mer "digital/kvantiserad" känsla än monotone
                                 dataKey="ns"
-                                stroke="#00ff00"
-                                strokeWidth={2}
+                                stroke="#22c55e" // green-500
+                                strokeWidth={1.5}
                                 dot={false}
-                                isAnimationActive={false}
+                                isAnimationActive={false} // Viktigt för realtidsprestanda
                             />
                         </LineChart>
                     </ResponsiveContainer>
+
+                    {/* Dekorativt brus/overlay för att matcha din design */}
+                    <div className="absolute inset-0 pointer-events-none border-t border-green-900/20 opacity-30"></div>
                 </div>
             )}
+
 
             <footer className="mt-8 pt-4 border-t border-green-900 flex justify-between text-[10px] text-green-800 uppercase tracking-widest">
                 <span>© {new Date().getFullYear()} IntelligentAudio.NET | Private Vault</span>
