@@ -25,8 +25,8 @@ export default function RealTimeDashboard() {
     const [jitter, setJitter] = useState(0);
     const lastArrivalRef = useRef(performance.now());
 
-    const { status, client, latency } = useNexusPulse(
-        'wss://pulse.intelligentaudio.net/pulse', process.env.NEXUS_PULSE_KEY || "NEXUS_PULSE_KEY" //In future use DEV_KEY
+    const { status, client, latency, slots } = useNexusPulse(
+        "wss://pulse.intelligentaudio.net/pulse?key=d2758732ef9e0bac94fb" 
     );
 
     // 1. GRAFEN: Reagerar direkt på latency-ändringar
@@ -66,9 +66,6 @@ export default function RealTimeDashboard() {
         return () => clearInterval(uiTimer);
     }, [status, client]); // Denna beror INTE på latency, så den överlever mätningarna
 
-
-
-
     return (
         <div className="p-8 font-mono bg-black text-green-500 min-h-screen">
             <header className="border-b border-green-900 pb-4 flex justify-between items-end">
@@ -93,17 +90,14 @@ export default function RealTimeDashboard() {
                 {/* Latency Card (Deterministisk från C# Header) */}
                 <div className="border border-green-900 p-6 bg-green-950/10 shadow-[0_0_15px_rgba(0,50,0,0.3)]">
                     <p className="text-[10px] text-green-700 uppercase tracking-widest">Pulse Latency</p>
-                    <p className="text-7xl font-black">{latency.toFixed(0)}<span className="text-2xl ml-2">ns</span></p>
+                    <p className="text-7xl font-black">{latency}<span className="text-2xl ml-2">ns</span></p>
                 </div>
 
                 {/* Entry Count Card (Läser direkt från din MMF-spegel) */}
                 <div className="border border-green-900 p-6 bg-green-950/10 shadow-[0_0_15px_rgba(0,50,0,0.3)]">
                     <p className="text-[10px] text-green-700 uppercase tracking-widest">Shared Memory Registry</p>
-                    <p className="text-8xl font-black tracking-tight">{new Intl.NumberFormat('sv-SE', {
-                        notation: "compact",
-                        compactDisplay: "short"
-                    }).format(uiEntryCount).replace(/\s/g, "") }<span className="text-2xl ml-2">slots</span></p>
-                    <p className="text-2xl">({uiEntryCount})</p>
+                    <p className="text-8xl font-black tracking-tight">{slots}<span className="text-2xl ml-2">slots</span></p>
+                    <p className="text-2xl">({slots})</p>
                 </div>
 
                 {/* Performance Constraints Card */}
