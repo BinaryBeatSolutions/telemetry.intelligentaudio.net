@@ -1,6 +1,17 @@
+
 # NEXUS V2.1 Technical Specification
 
+## Resources & Links
+
+- [**Project Pulse: Detailed Implementation**](https://intelligentaudio.net/nexus-pulse)
+- [**Explore Live Nexus Telemetry**](https://telemetry.intelligentaudio.net)
+- [**Connect: LinkedIn**](https://www.linkedin.com/in/binarybeats/)
+
+### Visual Verification
+
+The core performance and real-world jitter variance can be observed in real-time on the live dashboard:
 This documentation defines the "Red Lines" for NEXUS V2. The system is optimized for single-digit nanosecond latency by utilizing symmetrical memory blocks, Cache Line Alignment, and Direct Memory Access (DMA).
+[**Explore Live Nexus Telemetry**](https://telemetry.intelligentaudio.net)
 
 ## 1. NXP.Protocol (Data Layout)
 
@@ -34,12 +45,12 @@ Symmetrical data block (8+8+4+4). Designed to fit perfectly within CPU registers
 
 The link between silicon and software.
 
-* Method: Utilizes SafeMemoryMappedViewHandle to lock a raw byte* pointer in RAM.
+- Method: Utilizes SafeMemoryMappedViewHandle to lock a raw byte* pointer in RAM.
 
-* Zero-Copy: No copies are made between the file system and the application.
-* Addressing:
-* HeaderPtr: BasePointer + 0
-* DataPtr: BasePointer + 64 (Data starts immediately following the header)
+- Zero-Copy: No copies are made between the file system and the application.
+- Addressing:
+- HeaderPtr: BasePointer + 0
+- DataPtr: BasePointer + 64 (Data starts immediately following the header)
 
 ---
 
@@ -82,17 +93,17 @@ To eliminate **Cache Pollution**, real-time data is separated from historical au
 
 1. **Index Stream (nexusindex.ian)**
 
-* **Slot Size:** 24 Bytes
+- **Slot Size:** 24 Bytes
 
-* **Purpose:** Latest State / High-Frequency Read
-* **Pointer Math:** `Base + 64 + (i * 24)`
+- **Purpose:** Latest State / High-Frequency Read
+- **Pointer Math:** `Base + 64 + (i * 24)`
 
 2. **Vault Stream (nexusvault.ian)**
 
-* **Slot Size:** 32 Bytes
+- **Slot Size:** 32 Bytes
 
-* **Purpose:** Historical Audit / Time-Series (8b Timestamp + 24b Data)
-* **Pointer Math:** `Base + 64 + (i << 5)` // **Ultra-fast Bit Shift**
+- **Purpose:** Historical Audit / Time-Series (8b Timestamp + 24b Data)
+- **Pointer Math:** `Base + 64 + (i << 5)` // **Ultra-fast Bit Shift**
 
 ---
 
