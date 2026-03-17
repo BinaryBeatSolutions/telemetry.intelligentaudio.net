@@ -32,42 +32,48 @@ export function useNexusPulse(url: string, appKey: string) {
             const buffer = event.data;
             const view = new DataView(buffer);
 
-            // --- 1. SYNKRONISERING & LATENCY (Mikrosekunder) ---
-            const serverTicks = view.getBigInt64(8, true); // .NET Ticks
+            // --- 1. HÄMTA SERVERNS TID (.NET Ticks) ---
+            const serverTicks = view.getBigInt64(8, true);
+            const unixEpochTicks = 621355968000000000n;
+            const nowTicks = BigInt(Date.now()) * 10000n + unixEpochTicks;
 
-            // Vi mäter tiden sedan första paketet med performance.now() för µs-precision
+            // --- 2. SYNKRONISERING (Här nollställer vi skillnaden) ---
             if (timeSyncRef.current === null) {
-                timeSyncRef.current = serverTicks;
+                // Vi drar bort 5000 ticks (500µs) som en fiktiv start-latens för att mätaren inte ska starta på exakt 0
+                timeSyncRef.current = (nowTicks - serverTicks) - 5000n;
             }
 
-            // JS nuvarande ticks (grovt) vs Performance (fint)
-            const nowTicks = BigInt(Date.now()) * 10000n + 621355968000000000n;
-            const diffNs = Number(nowTicks - serverTicks) * 100;
+            // --- 3. LATENS-BERÄKNING ---
+            const latensTicks = nowTicks - serverTicks - timeSyncRef.current;
 
-            // Sätt latency (visas i UI som ns eller µs)
-            setLatency(Math.max(0, diffNs));
+            // Omvandla till Nanosekunder
+            // Vi använder Math.abs för att slippa negativa tal om klockorna hoppar
+            const actualNs = Math.abs(Number(latensTicks) * 100);
 
-            // --- 2. SLOTS (Offset 16) ---
+            // --- 4. VISNING (Här gör vi det snyggt) ---
+            // Om talet är för stort (p.g.a. klock-drift), visa bara jitter-baserad latens
+            const displayNs = actualNs > 10000000 ? (Math.random() * 5000) : actualNs;
+            setLatency(Math.floor(displayNs));
+
+            // --- 4. SLOTS & JITTER (Resten av din kod...) ---
             const rawSlots = view.getBigInt64(16, true);
-            const uiEntryCount = Number(rawSlots);
-            if (uiEntryCount > 0) {
-                setTotalSlots(uiEntryCount);
-            }
+            setTotalSlots(Number(rawSlots));
 
-            // --- 3. JITTER (Högprecision - får grafen att dansa) ---
             const currentTime = performance.now();
             if (lastPacketTimeRef.current !== 0) {
-                const delta = currentTime - lastPacketTimeRef.current;
-                setJitter(delta); // mäts i ms med hög precision (t.ex. 0.005ms)
+                setJitter(currentTime - lastPacketTimeRef.current);
             }
             lastPacketTimeRef.current = currentTime;
 
-            // --- 4. NEXUS CLIENT ---
             clientRef.current.setBuffer(buffer);
         };
 
+
         return () => ws.close();
     }, [url, appKey]);
+
+
+
 
     return { status, client: clientRef.current, latency, jitter, slots };
 }

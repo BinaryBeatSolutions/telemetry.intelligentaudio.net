@@ -26,7 +26,8 @@ export default function RealTimeDashboard() {
     const lastArrivalRef = useRef(performance.now());
 
     const { status, client, latency, slots } = useNexusPulse(
-        "wss://pulse.intelligentaudio.net/pulse?key=d2758732ef9e0bac94fb" 
+        "wss://pulse.intelligentaudio.net/pulse",
+        process.env.NEXT_PUBLIC_NEXUS_PULSE_KEY || "DEV_KEY"
     );
 
     // 1. GRAFEN: Reagerar direkt på latency-ändringar
@@ -90,7 +91,7 @@ export default function RealTimeDashboard() {
                 {/* Latency Card (Deterministisk från C# Header) */}
                 <div className="border border-green-900 p-6 bg-green-950/10 shadow-[0_0_15px_rgba(0,50,0,0.3)]">
                     <p className="text-[10px] text-green-700 uppercase tracking-widest">Pulse Latency</p>
-                    <p className="text-7xl font-black">{latency}<span className="text-2xl ml-2">ns</span></p>
+                    <p className="text-7xl font-black"><span>{latency > 1000000 ? (latency / 1000000).toFixed(2) + " ms" : (latency / 1000).toFixed(0)}</span><span className="text-2xl ml-2">µs</span></p>
                 </div>
 
                 {/* Entry Count Card (Läser direkt från din MMF-spegel) */}
