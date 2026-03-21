@@ -76,7 +76,7 @@ export default function RealTimeDashboard() {
             {/* HEADER SECTION */}
             <header className="border-b border-green-900 pb-4 flex justify-between items-end">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tighter italic">NEXUS [PULSE-MIRROR]</h1>
+                    <h1 className="text-3xl font-bold tracking-tight ">NEXUS [PULSE-MIRROR]</h1>
                     <div className="flex gap-4 mt-1">
                         <p className="text-[10px] text-green-800 uppercase tracking-widest">Protocol: NXP v2.1</p>
                         <p className="text-[10px] text-green-800 uppercase tracking-widest">Engine: .NET 10 AOT</p>
