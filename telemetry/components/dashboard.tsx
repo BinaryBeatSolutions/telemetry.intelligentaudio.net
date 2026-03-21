@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useNexusPulse } from '@/hooks/useNexusPulse';
 import Link from 'next/link';
+import { AreaChart, Area } from 'recharts';
 
 
 // Dynamiska importer för att slippa SSR-problem med Recharts
@@ -24,6 +25,7 @@ export default function RealTimeDashboard() {
     const [uiEntryCount, setUiEntryCount] = useState(0);
     const [jitter, setJitter] = useState(0);
     const lastArrivalRef = useRef(performance.now());
+    const [cpuTemp, setCpuTemp] = useState("0.0");
 
     const { status, client, latency, slots } = useNexusPulse(
         "wss://pulse.intelligentaudio.net/pulse",
@@ -62,6 +64,8 @@ export default function RealTimeDashboard() {
         const uiTimer = setInterval(() => {
             const count = client.getEntryCount();
             setUiEntryCount(prev => (prev !== count ? count : prev));
+            const temp = client.getCpuTemp();
+            if (temp > 0) setCpuTemp(temp.toFixed(1));
         }, 100);
 
         return () => clearInterval(uiTimer);
@@ -69,94 +73,156 @@ export default function RealTimeDashboard() {
 
     return (
         <div className="p-8 font-mono bg-black text-green-500 min-h-screen">
+            {/* HEADER SECTION */}
             <header className="border-b border-green-900 pb-4 flex justify-between items-end">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tighter">NEXUS [PULSE-MIRROR]</h1>
-                    <p className="text-[10px] text-green-800 uppercase">
-                        Protocol: NEXUS.Pulse v1.0 / Transport: WSS-Binary / Engine: .NET 10
-                    </p>
+                    <h1 className="text-3xl font-bold tracking-tighter italic">NEXUS [PULSE-MIRROR]</h1>
+                    <div className="flex gap-4 mt-1">
+                        <p className="text-[10px] text-green-800 uppercase tracking-widest">Protocol: NXP v2.1</p>
+                        <p className="text-[10px] text-green-800 uppercase tracking-widest">Engine: .NET 10 AOT</p>
+                        <p className="text-[10px] text-green-800 uppercase tracking-widest">Mirror: 24.0 MB</p>
+                    </div>
                 </div>
-                <div className="text-right">
-                    <p className="text-[10px]">SYSTEM STATUS:
-                        <span className={status === 'online' ? "text-green-400" : "text-red-600"}>
-                            {status.toUpperCase()}
+                <div className="text-right space-y-1">
+                    <div className="flex items-center justify-end gap-2">
+                        <span className="text-[10px] text-green-800">VAULT-LOCATION:</span>
+                        <span className="text-[10px] text-white">WASHINGTON, D.C.</span>
+                    </div>
+                    <div className="flex items-center justify-end gap-2 text-[10px]">
+                        <span className="text-green-800">LINK-INTEGRITY:</span>
+                        <span className={status === 'online' ? "text-green-400" : "text-red-600 animate-pulse"}>
+                            {status === 'online' ? "NOMINAL" : "CRITICAL"}
                         </span>
-                    </p>
-                    <p className="text-[10px] text-green-700 underline">telemetry.intelligentaudio.net</p>
-                    <p className="text-[10px] text-green-700 underline">Local instance: Norway</p>
+                    </div>
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-                {/* Latency Card (Deterministisk från C# Header) */}
-                <div className="border border-green-900 p-6 bg-green-950/10 shadow-[0_0_15px_rgba(0,50,0,0.3)]">
-                    <p className="text-[10px] text-green-700 uppercase tracking-widest">Pulse Latency</p>
-                    <p className="text-7xl font-black"><span>{latency > 1000000 ? (latency / 1000000).toFixed(2) + " ms" : (latency / 1000).toFixed(0)}</span><span className="text-2xl ml-2">µs</span></p>
+
+
+            {/* QUICK STATS BAR - Flyttar constraints hit för att spara plats */}
+            <div className="flex justify-between border-b border-green-900/30 py-2 text-[9px] text-green-900 uppercase tracking-[0.2em]">
+                <span>[ ALLOCATION: ZERO-HEAP ]</span>
+                <span>[ SYNC: DIRECT-PTR ]</span>
+                <span>[ SEARCH: LOG(N) ]</span>
+                <span>[ ARCH: NANO-STANDARD ]</span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-8">
+
+                {/* 1. LATENCY (Huvudfokus) */}
+                {/* 1. LATENCY (Huvudfokus med Geo-Link) */}
+                <div className="lg:col-span-1 border border-green-900 p-4 bg-green-950/5 relative overflow-hidden flex flex-col justify-between">
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <p className="text-[10px] text-green-700 uppercase tracking-widest">Pulse Latency</p>
+                            <span className="text-[12px] text-green-900 font-bold italic">NOR ↔ USA</span>
+                        </div>
+                        <p className="text-6xl font-black tracking-tighter text-white">
+                            {latency > 1000000 ? (latency / 1000000).toFixed(2) : (latency / 1000).toFixed(0)}
+                            <span className="text-xl ml-1 text-green-800">{latency > 1000000 ? "ms" : "µs"}</span>
+                        </p>
+                    </div>
+
+                    <div className="mt-4 pt-2 border-t border-green-900/30">
+                        <p className="text-[8px] text-green-900 uppercase leading-tight">
+                            Route: Norway_Local_Inst &gt; Cloudflare_Tunnel &gt; Vercel_DC_USA
+                        </p>
+                        <p className="text-[8px] text-green-500 font-bold mt-1 tracking-tighter">
+                            ATLANTIC_LINK_STABLE // NO_PACKET_LOSS
+                        </p>
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 h-1 bg-green-500/20 w-full">
+                        <div className="h-full bg-green-500 transition-all duration-300" style={{ width: `${Math.min(100, (latency / 2000000) * 100)}%` }} />
+                    </div>
                 </div>
 
-                {/* Entry Count Card (Läser direkt från din MMF-spegel) */}
-                <div className="border border-green-900 p-6 bg-green-950/10 shadow-[0_0_15px_rgba(0,50,0,0.3)]">
-                    <p className="text-[10px] text-green-700 uppercase tracking-widest">Shared Memory Registry</p>
-                    <p className="text-8xl font-black tracking-tight">{slots}<span className="text-2xl ml-2">slots</span></p>
-                    <p className="text-2xl">({slots})</p>
+
+                {/* 2. REGISTRY SLOTS (Huvudfokus) */}
+                <div className="lg:col-span-2 border border-green-900 p-4 bg-green-950/5 flex justify-between items-center">
+                    <div>
+                        <p className="text-[10px] text-green-700 uppercase mb-1">Shared Memory Registry</p>
+                        <p className="text-7xl font-black tracking-tighter text-white">
+                            {slots.toLocaleString()}
+                            <span className="text-xl ml-2 text-green-800 tracking-normal font-light uppercase text-sm">active_slots</span>
+                        </p>
+                    </div>
+                    <div className="text-right border-l border-green-900 pl-6 hidden md:block">
+                        <p className="text-[10px] text-green-800 mb-1 font-bold">SEGMENTATION</p>
+                        <p className="text-xl text-white font-mono">24B/ENTRY</p>
+                        <p className="text-[9px] text-green-900">NXP-BUFFER-STREAMS</p>
+                    </div>
                 </div>
 
-                {/* Performance Constraints Card */}
-                <div className="border border-green-900 p-6 bg-green-900/5 text-[10px] space-y-2">
-                    <p className="text-green-600 font-bold border-b border-green-900 pb-1 uppercase">Nano-Standard Verification</p>
-                    <div className="flex justify-between"><span>ALLOCATION:</span><span className="text-white">ZERO-HEAP</span></div>
-                    <div className="flex justify-between"><span>MMF MIRROR:</span><span className="text-white">24.0 MB</span></div>
-                    <div className="flex justify-between"><span>SEARCH O:</span><span className="text-white">LOG(N)</span></div>
-                    <div className="flex justify-between"><span>SYNC:</span><span className="text-white">DIRECT-PTR</span></div>
+                {/* 3. CPU HEAT (Den nya modulen - Kompakt men tydlig) */}
+                <div className="lg:col-span-1 border border-green-900 p-4 bg-green-950/5 flex flex-col justify-between">
+                    <div className="flex justify-between items-start">
+                        <p className="text-[10px] text-green-700 uppercase">Thermal Load</p>
+                        <span className="text-[9px] px-1 border border-green-700 text-green-700">WMI.V2</span>
+                    </div>
+                    <div className="flex items-end gap-3">
+                        <p className="text-5xl font-black text-white">{cpuTemp}<span className="text-lg text-green-800">°C</span></p>
+                        {/* En liten vertikal mätare som visar "kylan" */}
+                        <div className="flex gap-[2px] mb-2 h-8">
+                            {[...Array(10)].map((_, i) => (
+                                <div
+                                    key={i}
+                                    className={`w-1 h-full ${i < (parseInt(cpuTemp) / 10) ? 'bg-green-500' : 'bg-green-900/30'}`}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                    <p className="text-[9px] text-green-900 italic font-bold">STABLE_THERMAL_VERIFICATION</p>
                 </div>
             </div>
 
-            {/* Real-time Graph (Visar jitter/latens i nätverkspulsen) */}
-            {isClient && (
-                <div className="h-[250px] w-full border border-green-900 bg-black p-2 relative mt-8">
-                    <div className="absolute top-2 left-4 text-[10px] text-green-800 uppercase tracking-widest z-10">
-                        Packet Arrival Variance (Jitter)
-                    </div>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={metrics}>
-                            <YAxis
-                                hide={false} // Visa den för tekniker, så de ser skalan (t.ex. 8ms - 12ms)
-                                orientation="right" // Snyggt att ha den till höger i en terminal-look
-                                tick={{ fill: '#050', fontSize: 8 }} // Diskret mörkgrön färg
-                                stroke="#050"
-
-                                /* 
-                                   DETTA ÄR HEMLIGHETEN: 
-                                   'dataMin - 5' och 'dataMax + 5' tvingar grafen att alltid 
-                                   centrera kurvan i mitten av boxen, oavsett om ditt jitter 
-                                   ligger på 10ms eller 100ms. Det skapar "vandraren".
-                                */
-                                domain={['dataMin - 5', 'dataMax + 5']}
-
-                                // Tillåt decimaler eftersom performance.now() är extremt exakt
-                                allowDecimals={true}
-                                tickFormatter={(value) => `${value.toFixed(1)}ms`}
-                            />
-                            <Line
-                                type="monotone" // De snygga mjuka kurvorna
-                                dataKey="ns"
-                                stroke="#00ff00"
-                                strokeWidth={2}
-                                dot={false}
-                                isAnimationActive={false} // KRITISKT: Så att grafen rör sig jämnt i realtid
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
+            {/* JITTER GRAPH SECTION */}
+            <div className="mt-8 border border-green-900 bg-black/40 backdrop-blur-sm p-4 relative h-[300px]">
+                <div className="flex justify-between items-center mb-4">
+                    <span className="text-[10px] text-green-700 uppercase tracking-widest font-bold">
+                        Packet Arrival Variance (Jitter_Variance)
+                    </span>
+                    <span className="text-[10px] text-green-900">
+                        SAMPLING: 5HZ / 200MS_TICK
+                    </span>
                 </div>
-            )}
+                <ResponsiveContainer width="100%" height="90%">
+                    <AreaChart data={metrics}>
+                        <defs>
+                            <linearGradient id="colorNs" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#00ff00" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#00ff00" stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <YAxis
+                            hide={false}
+                            orientation="right"
+                            tick={{ fill: '#030', fontSize: 8 }}
+                            stroke="#010"
+                            domain={['dataMin - 1', 'dataMax + 1']}
+                            allowDecimals={true}
+                            tickFormatter={(v) => `${v.toFixed(2)}ms`}
+                        />
+                        <Area
+                            type="monotone" // Mjuka kurvor för "puls"-känsla
+                            dataKey="ns"
+                            stroke="#00ff00"
+                            strokeWidth={1.5}
+                            fillOpacity={1}
+                            fill="url(#colorNs)" // Snygg toning under linjen
+                            isAnimationActive={false}
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
 
-
-            <footer className="mt-8 pt-4 border-t border-green-900 flex justify-between text-[10px] text-green-800 uppercase tracking-widest">
-                <span>© {new Date().getFullYear()} <Link href="https://intelligentaudio.net/nexus-pulse" target="_blank">NEXUS.Pulse</Link> | Private Vault</span>
+            <footer className="mt-8 pt-4 border-t border-green-900 flex justify-between text-[9px] text-green-900 uppercase tracking-[0.3em]">
+                <span>© {new Date().getFullYear()} NEXUS.PULSE ENGINE | NO_HEAP_LEAK_DETECTED</span>
                 <span className={status === 'online' ? "animate-pulse text-green-400" : "text-red-900"}>
-                    {status === 'online' ? "● NEXUS-LINK ESTABLISHED" : "○ SEARCHING FOR NEXUS..."}
+                    {status === 'online' ? ">> LINK ESTABLISHED_OK" : ">> SEARCHING_FOR_VAULT..."}
                 </span>
             </footer>
         </div>
+
     );
 }

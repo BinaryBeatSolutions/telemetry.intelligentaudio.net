@@ -12,12 +12,25 @@ export class NexusClient {
     }
 
     public getEntryCount(): number {
+        if (!this.buffer || this.buffer.byteLength < 24) return 0;
+        const view = new DataView(this.buffer);
+
+        // 1. Läs hela 64-bitars talet (inklusive temp-byten i toppen)
+        const rawVal = view.getBigInt64(16, true);
+
+        // 2. "Maskning": Vi nollar ut den sista byten (byte 23) 
+        // så att temperaturen inte förstör slot-antalet.
+        // 0xFFFFFFFFFFFFFFn lämnar de första 7 byten intakta.
+        const maskedVal = rawVal & 0x00FFFFFFFFFFFFFFn;
+
+        return Number(maskedVal);
+    }
+
+    public getCpuTemp(): number {
         if (!this.buffer || this.buffer.byteLength < this.HEADER_SIZE) return 0;
         const view = new DataView(this.buffer);
 
-        // --- VIKTIGT: EntryCount ligger nu på Offset 16 (8b long) ---
-        // Du läste Int32 på 20 förut, nu kör vi BigInt64 på 16 för nano-precision
-        return Number(view.getBigInt64(16, true));
+        return view.getUint8(23);
     }
 
     public findEntry(targetKey: bigint) {
