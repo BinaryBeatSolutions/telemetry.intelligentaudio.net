@@ -176,6 +176,20 @@ export default function RealTimeDashboard() {
                 </div>
             </div>
 
+
+            {/* Mirror Status Grid - Visar att minnet lever */}
+            <div className="border border-green-900 p-2 bg-black mt-4">
+                <p className="text-[8px] text-green-800 mb-1 uppercase tracking-widest">Memory Map (First 1K Slots)</p>
+                <div className="grid grid-cols-50 gap-[1px]">
+                    {[...Array(1000)].map((_, i) => (
+                        <div
+                            key={i}
+                            className={`w-1 h-1 ${i < slots ? 'bg-green-500/40' : 'bg-green-900/10'}`}
+                        />
+                    ))}
+                </div>
+            </div>
+
             {/* JITTER GRAPH SECTION */}
             <div className="mt-8 border border-green-900 bg-black/40 backdrop-blur-sm p-4 relative h-[300px]">
                 <div className="flex justify-between items-center mb-4">
