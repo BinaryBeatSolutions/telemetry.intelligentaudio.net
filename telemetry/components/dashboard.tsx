@@ -85,8 +85,8 @@ export default function RealTimeDashboard() {
                 </div>
                 <div className="text-right space-y-1">
                     <div className="flex items-center justify-end gap-2">
-                        <span className="text-[10px] text-green-800">VAULT-LOCATION:</span>
-                        <span className="text-[10px] text-white">WASHINGTON, D.C.</span>
+                        <span className="text-[10px] text-green-800">MIRROR-LOC:</span>
+                        <span className="text-[10px] text-white">WA, D.C.</span>
                     </div>
                     <div className="flex items-center justify-end gap-2 text-[10px]">
                         <span className="text-green-800">LINK-INTEGRITY:</span>
@@ -219,7 +219,7 @@ export default function RealTimeDashboard() {
             <footer className="mt-8 pt-4 border-t border-green-900 flex justify-between text-[9px] text-green-900 uppercase tracking-[0.3em]">
                 <span>© {new Date().getFullYear()} NEXUS.PULSE ENGINE | NO_HEAP_LEAK_DETECTED</span>
                 <span className={status === 'online' ? "animate-pulse text-green-400" : "text-red-900"}>
-                    {status === 'online' ? ">> LINK ESTABLISHED_OK" : ">> SEARCHING_FOR_VAULT..."}
+                    {status === 'online' ? ">> LINK ESTABLISHED_OK" : ">> SEARCHING_FOR_NEXUS..."}
                 </span>
             </footer>
         </div>
