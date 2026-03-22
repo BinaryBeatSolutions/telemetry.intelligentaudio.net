@@ -7,9 +7,15 @@ export function useNexusPulse(url: string, appKey: string) {
     const [latency, setLatency] = useState(0);
     const [jitter, setJitter] = useState(0);
     const [slots, setTotalSlots] = useState(0);
-    const [cpuTemp, setCpuTemp] = useState("0.0");
+    const [cpuTemp, setCpuTemp] = useState(0);
+    const [countdown, setCountdown] = useState(600);
+    const [lastpulse ,setLastPulseTime] = useState("")
+    const [engineNs, setEngineNs] = useState(0); //
+    
 
-    const clientRef = useRef(new NexusClient());
+  // Initialisera som null, då vet TS att den kan vara tom i början
+    const clientRef = useRef<NexusClient | null>(null);
+
     const lastPacketTimeRef = useRef<number>(0);
     // Vi behöver en bas-offset för att gå från ms-precision till mikrosekunder
     const timeSyncRef = useRef<bigint | null>(null);
@@ -27,46 +33,22 @@ export function useNexusPulse(url: string, appKey: string) {
         };
         ws.onclose = () => setStatus('offline');
 
-        ws.onmessage = (event: MessageEvent) => {
-            if (!(event.data instanceof ArrayBuffer)) return;
-            const buffer = event.data;
-            const view = new DataView(buffer);
+        ws.onmessage = (event) => {
+            const view = new DataView(event.data);
 
-            // --- 1. LATENCY & SYNCHRONIZATION ---
-            const serverTicks = view.getBigInt64(8, true);
-            const unixEpochTicks = 621355968000000000n;
-            const nowTicks = BigInt(Date.now()) * 10000n + unixEpochTicks;
+            // 2. Hämta datan från din Header (64 bytes)
+            const slots = Number(view.getBigInt64(16, true)); 
+            const temp = view.getUint8(25);
+            const nextPulse = view.getUint16(27, true);
+            const actualNs = view.getFloat64(33, true); //NS
 
-            if (timeSyncRef.current === null) {
-                timeSyncRef.current = (nowTicks - serverTicks) - 5000n;
-            }
-
-            const latensTicks = nowTicks - serverTicks - timeSyncRef.current;
-            const actualNs = Number(latensTicks) * 100;
-            setLatency(Math.floor(actualNs > 10000000 ? 500000 : actualNs));
-
-            // --- 2. CPU HEAT (Hämtas från den 'lånade' byten på offset 23) ---
-            // Vi läser bara en Uint8 (1 byte) så vi inte kraschar
-            const rawTemp = view.getUint8(23);
-            if (rawTemp > 0) {
-                setCpuTemp(rawTemp.toString()); // Visar t.ex. "32"
-            }
-
-            // --- 3. SLOTS (Maskning för att ta bort temp-byten från talet) ---
-            const rawSlotsFull = view.getBigInt64(16, true);
-            // Vi nollar ut den sista byten (23) så att 32°C inte ser ut som triljoner slots
-            const maskedSlots = rawSlotsFull & 0x00FFFFFFFFFFFFFFn;
-            setTotalSlots(Number(maskedSlots));
-
-            // --- 4. JITTER ---
-            const currentTime = performance.now();
-            if (lastPacketTimeRef.current !== 0) {
-                setJitter(currentTime - lastPacketTimeRef.current);
-            }
-            lastPacketTimeRef.current = currentTime;
-            clientRef.current.setBuffer(buffer);
+            // 4. Uppdatera React State
+            setEngineNs(actualNs); 
+            setTotalSlots(slots);
+            setCpuTemp(temp);
+            setCountdown(nextPulse);
+            setLatency(actualNs); 
         };
-
 
         // --- 2. LOGIK FÖR ANIMATION (Här skapar vi darrningen, SEPARAT från onmessage) ---
         let frame: number;
@@ -95,5 +77,5 @@ export function useNexusPulse(url: string, appKey: string) {
         };
     }, [url, appKey, status]);
 
-    return { status, client: clientRef.current, latency, jitter, slots, cpuTemp };
+    return { status, client: clientRef.current, latency, jitter, slots, cpuTemp, countdown, setCpuTemp, setCountdown, engineNs };
 }

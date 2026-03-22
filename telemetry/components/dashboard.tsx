@@ -19,18 +19,22 @@ interface MetricPoint {
 }
 
 export default function RealTimeDashboard() {
-
     const [isClient, setIsClient] = useState(true);
     const [metrics, setMetrics] = useState<MetricPoint[]>([]);
     const [uiEntryCount, setUiEntryCount] = useState(0);
-    const [jitter, setJitter] = useState(0);
     const lastArrivalRef = useRef(performance.now());
-    const [cpuTemp, setCpuTemp] = useState("0.0");
 
-    const { status, client, latency, slots } = useNexusPulse(
-        "wss://pulse.intelligentaudio.net/pulse",
-        process.env.NEXT_PUBLIC_NEXUS_PULSE_KEY || "DEV_KEY"
-    );
+    const { 
+        status, 
+        client,
+        latency, 
+        jitter,
+        slots, 
+        cpuTemp,   
+        countdown,
+        engineNs
+    } = useNexusPulse("wss://pulse.intelligentaudio.net/pulse",
+        process.env.NEXT_PUBLIC_NEXUS_PULSE_KEY || "DEV_KEY");
 
     // 1. GRAFEN: Reagerar direkt på latency-ändringar
     useEffect(() => {
@@ -51,7 +55,7 @@ export default function RealTimeDashboard() {
 
                 return [...prev, newPoint].slice(-100);
             });
-        }, 200); // 5Hz ger en lagom snabb vandring som ser "aktiv" ut
+        }, 200); // 5Hz ger en lagom snabb vandring
 
         return () => clearInterval(graphTimer);
     }, [status, latency]); // Lyssna på både status och latency
@@ -59,17 +63,16 @@ export default function RealTimeDashboard() {
 
     // 2. SIFFRAN: En stabil timer som körs 10 gånger i sekunden
     useEffect(() => {
-        if (status !== 'online' || !client) return;
+        if (status !== 'online' || engineNs === 0) return;
 
-        const uiTimer = setInterval(() => {
-            const count = client.getEntryCount();
-            setUiEntryCount(prev => (prev !== count ? count : prev));
-            const temp = client.getCpuTemp();
-            if (temp > 0) setCpuTemp(temp.toFixed(1));
-        }, 100);
-
-        return () => clearInterval(uiTimer);
-    }, [status, client]); // Denna beror INTE på latency, så den överlever mätningarna
+        setMetrics(prev => {
+            const newPoint = {
+                ns: engineNs, // Din RIKTIGA i7-prestanda
+                time: new Date().toISOString()
+            };
+            return [...prev, newPoint].slice(-60); // Spara senaste 60 pulserna
+        });
+    }, [engineNs, status]);  // Denna beror INTE på latency, så den överlever mätningarna
 
     return (
         <div className="p-8 font-mono bg-black text-green-500 min-h-screen">
@@ -97,6 +100,51 @@ export default function RealTimeDashboard() {
                 </div>
             </header>
 
+            {/* NEXUS V2.1 SYNCHRONIZATION COMMAND CENTER */}
+            <div className="mb-6 border-2 border-green-500/40 bg-black/80 p-4 shadow-[0_0_25px_rgba(34,197,94,0.15)] relative">
+                
+                {/* Bakgrunds-grid för teknisk look */}
+                <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com')]" />
+
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 relative z-10">
+                    
+                    {/* Status & Version */}
+                    <div className="flex flex-col">
+                        <span className="text-[10px] uppercase tracking-[0.3em] text-green-700 font-bold">
+                            Protocol_Status // NXP_v2.1_Master
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#4ade80]" />
+                            <span className="text-green-400 font-mono text-sm uppercase">NEXUS Link: Active</span>
+                        </div>
+                    </div>
+
+                    {/* DEN STORA TIMERN - CENTRERAD OCH TYDLIG */}
+                    <div className="flex flex-col items-center">
+                        <span className="text-[9px] uppercase tracking-widest mb-1 text-yellow-500/30">Mass Injection T-Minus:</span>
+                        <div className="font-mono text-4xl md:text-5xl text-green-400 font-black tracking-tighter drop-shadow-[0_0_12px_rgba(74,222,128,0.6)]">
+                            {Math.floor(countdown / 60).toString().padStart(2, '0')}:
+                            {(countdown % 60).toString().padStart(2, '0')}
+                        </div>
+                    </div>
+
+                    {/* Telemetri Snapshot */}
+                    <div className="text-right hidden md:block">
+                        <span className="text-[10px] uppercase tracking-widest text-green-800">Telemetry_Origin</span>
+                        <div className="text-green-600 font-mono text-xs">NORWAY_NODE_01</div>
+                        <div className="text-green-700 font-mono text-[9px]">TEMP_STABLE: {cpuTemp}°C</div>
+                    </div>
+                </div>
+
+                {/* PROGRESS BAR - Denna krymper i takt med klockan */}
+                <div className="mt-4 h-1 w-full bg-green-950/50 rounded-full overflow-hidden border border-green-900/30">
+                    <div 
+                        className="h-full bg-gradient-to-r from-green-900 via-green-500 to-green-400 shadow-[0_0_10px_#4ade80] transition-all duration-1000 ease-linear"
+                        style={{ width: `${(countdown / 600) * 100}%` }}
+                    />
+                </div>
+            </div>
+
 
 
             {/* QUICK STATS BAR - Flyttar constraints hit för att spara plats */}
@@ -109,7 +157,6 @@ export default function RealTimeDashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-8">
 
-                {/* 1. LATENCY (Huvudfokus) */}
                 {/* 1. LATENCY (Huvudfokus med Geo-Link) */}
                 <div className="lg:col-span-1 border border-green-900 p-4 bg-green-950/5 relative overflow-hidden flex flex-col justify-between">
                     <div>
@@ -117,18 +164,27 @@ export default function RealTimeDashboard() {
                             <p className="text-[10px] text-green-700 uppercase tracking-widest">Pulse Latency</p>
                             <span className="text-[12px] text-green-900 font-bold italic">NOR ↔ USA</span>
                         </div>
-                        <p className="text-6xl font-black tracking-tighter text-white">
-                            {latency > 1000000 ? (latency / 1000000).toFixed(2) : (latency / 1000).toFixed(0)}
-                            <span className="text-xl ml-1 text-green-800">{latency > 1000000 ? "ms" : "µs"}</span>
+                       <p className="text-6xl font-black tracking-tighter text-white">
+                            {/* 1. Över 1ms -> Visa ms */}
+                            {latency >= 1000000 ? (latency / 1000000).toFixed(2) : 
+                            /* 2. Över 1µs -> Visa µs */
+                            latency >= 1000 ? (latency / 1000).toFixed(1) : 
+                            /* 3. Under 1µs -> Visa rena Nanosekunder (ns)! */
+                            latency.toFixed(2)}
+                            
+                            <span className="text-xl ml-1 text-green-500">
+                                {latency >= 1000000 ? "ms" : 
+                                latency >= 1000 ? "µs" : "ns"}
+                            </span>
                         </p>
-                    </div>
+                       </div>
 
                     <div className="mt-4 pt-2 border-t border-green-900/30">
                         <p className="text-[8px] text-green-900 uppercase leading-tight">
-                            Route: Norway_Local_Inst &gt; Cloudflare_Tunnel &gt; Vercel_DC_USA
+                            Norway Local Inst &gt; Cloudflare Tunnel &gt; Vercel DC_USA
                         </p>
                         <p className="text-[8px] text-green-500 font-bold mt-1 tracking-tighter">
-                            ATLANTIC_LINK_STABLE // NO_PACKET_LOSS
+                            ATLANTIC LINK STABLE // NO_PACKET_LOSS
                         </p>
                     </div>
 
@@ -144,7 +200,7 @@ export default function RealTimeDashboard() {
                         <p className="text-[10px] text-green-700 uppercase mb-1">Shared Memory Registry</p>
                         <p className="text-7xl font-black tracking-tighter text-white">
                             {slots.toLocaleString()}
-                            <span className="text-xl ml-2 text-green-800 tracking-normal font-light uppercase text-sm">active_slots</span>
+                            <span className="text-xl ml-2 text-green-800 tracking-normal font-light uppercase text-sm">Slots</span>
                         </p>
                     </div>
                     <div className="text-right border-l border-green-900 pl-6 hidden md:block">
@@ -154,7 +210,7 @@ export default function RealTimeDashboard() {
                     </div>
                 </div>
 
-                {/* 3. CPU HEAT (Den nya modulen - Kompakt men tydlig) */}
+                {/* 3. CPU HEAT (Kompakt och tydlig) */}
                 <div className="lg:col-span-1 border border-green-900 p-4 bg-green-950/5 flex flex-col justify-between">
                     <div className="flex justify-between items-start">
                         <p className="text-[10px] text-green-700 uppercase">Thermal Load</p>
@@ -167,7 +223,7 @@ export default function RealTimeDashboard() {
                             {[...Array(10)].map((_, i) => (
                                 <div
                                     key={i}
-                                    className={`w-1 h-full ${i < (parseInt(cpuTemp) / 10) ? 'bg-green-500' : 'bg-green-900/30'}`}
+                                    className={`w-1 h-full ${i < (parseInt(cpuTemp.toFixed()) / 10) ? 'bg-green-500' : 'bg-green-900/30'}`}
                                 />
                             ))}
                         </div>
@@ -213,9 +269,9 @@ export default function RealTimeDashboard() {
                             orientation="right"
                             tick={{ fill: '#030', fontSize: 8 }}
                             stroke="#010"
-                            domain={['dataMin - 1', 'dataMax + 1']}
                             allowDecimals={true}
-                            tickFormatter={(v) => `${v.toFixed(2)}ms`}
+                            tickFormatter={(value) => `${value.toFixed(1)}ns`}
+                            domain={[0, 'auto']} allowDataOverflow={false}
                         />
                         <Area
                             type="monotone" // Mjuka kurvor för "puls"-känsla
@@ -231,7 +287,7 @@ export default function RealTimeDashboard() {
             </div>
 
             <footer className="mt-8 pt-4 border-t border-green-900 flex justify-between text-[9px] text-green-900 uppercase tracking-[0.3em]">
-                <span>© {new Date().getFullYear()} NEXUS.PULSE ENGINE | NO_HEAP_LEAK_DETECTED</span>
+                <span>© {new Date().getFullYear()} NEXUS.PULSE ENGINE | NO HEAP LEAK_DETECTED</span>
                 <span className={status === 'online' ? "animate-pulse text-green-400" : "text-red-900"}>
                     {status === 'online' ? ">> LINK ESTABLISHED_OK" : ">> SEARCHING_FOR_NEXUS..."}
                 </span>
