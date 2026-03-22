@@ -18,6 +18,13 @@ interface MetricPoint {
     time: string;
 }
 
+const formatSlots = (value:any) => {
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 1
+  }).format(value);
+};
 
 export default function RealTimeDashboard() {
     const [isClient, setIsClient] = useState(true);
@@ -275,8 +282,9 @@ export default function RealTimeDashboard() {
                     <div>
                         <p className="text-[10px] text-green-700 uppercase mb-1">Shared Memory Registry</p>
                         <p className="text-7xl font-black tracking-tighter text-white">
-                            {slots.toLocaleString()}
+                           {formatSlots(slots)}
                             <span className="text-xl ml-2 text-green-800 tracking-normal font-light uppercase text-sm">Slots</span>
+                            <div className="font-mono text-[24px] uppercase tracking-widest">({slots})</div>
                         </p>
                     </div>
                     <div className="text-right border-l border-green-900 pl-6 hidden md:block">
