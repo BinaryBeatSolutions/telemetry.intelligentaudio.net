@@ -26,6 +26,7 @@ export function useNexusPulse(url: string, appKey: string) {
 
         const ws = new WebSocket(finalUrl);
         ws.binaryType = 'arraybuffer';
+        
 
         ws.onopen = () => {
             console.log("[NXP] Connected to Pulse!");
