@@ -374,7 +374,7 @@ export default function RealTimeDashboard() {
             </div>
 
             <footer className="mt-8 pt-4 border-t border-green-900 flex justify-between text-[9px] text-green-900 uppercase tracking-[0.3em]">
-                <span>© {new Date().getFullYear()} NEXUS.PULSE ENGINE | NO HEAP LEAK_DETECTED</span>
+                <span>© {new Date().getFullYear()} NEXUS.PULSE ENGINE | NO HEAP LEAK_DETECTED {/*todo*/}</span>
                 <span className={status === 'online' ? "animate-pulse text-green-400" : "text-red-900"}>
                     {status === 'online' ? ">> LINK ESTABLISHED_OK" : ">> SEARCHING_FOR_NEXUS..."}
                 </span>

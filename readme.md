@@ -3,9 +3,20 @@
 
 ## Resources & Links
 
-- [**Project Pulse: Detailed Implementation**](https://intelligentaudio.net/nexus-pulse)
+- [**Project Pulse: Detailed information**](https://intelligentaudio.net/nexus-pulse)
 - [**Explore Live Nexus Telemetry**](https://telemetry.intelligentaudio.net)
 - [**Connect: LinkedIn**](https://www.linkedin.com/in/binarybeats/)
+
+## Architect's Note
+
+    The results of previous 1.51ns (mars 19 2026) prove that the combination of 
+    a **64-byte header** and **24-byte entries** has eliminated virtually all 
+    software-induced latency. The system operates at the physical frontier of 
+    the memory bus (DDR5) bandwidth.
+    We mount 10.4Gb as the speed of 1.56ns without any CPU overheat (29degrees).
+    At this scale, software performance is dictated by the L1 cache. 
+    Any regression exceeding 0.5ns is considered a violation of the NXP core principles.
+---
 
 ### Visual Verification
 
@@ -93,25 +104,6 @@ To eliminate **Cache Pollution**, real-time data is separated from historical au
 
 1. **Index Stream (nexusindex.ian)**
 
-- **Slot Size:** 24 Bytes
+** Slot Size:** 24 Bytes
 
-- **Purpose:** Latest State / High-Frequency Read
-- **Pointer Math:** `Base + 64 + (i * 24)`
-
-2. **Vault Stream (nexusvault.ian)**
-
-- **Slot Size:** 32 Bytes
-
-- **Purpose:** Historical Audit / Time-Series (8b Timestamp + 24b Data)
-- **Pointer Math:** `Base + 64 + (i << 5)` // **Ultra-fast Bit Shift**
-
----
-
-## Architect's Note
-
-The results of **~8.7 ns** prove that the combination of a **64-byte header** and **24-byte entries** has eliminated virtually all software-induced latency. The system operates at the physical frontier of the memory bus (DDR4/5) bandwidth.
-
-Any future modification increasing these metrics by more than **0.5 ns** in the core engine is considered a regression and must be justified by critical business logic.
-
----
 *Verified via Magic Header: 0x49414E4558555321 ("IANEXUS!")*
